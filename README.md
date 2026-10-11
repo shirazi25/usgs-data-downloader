@@ -97,6 +97,17 @@ For the common hydrological variables, the metric option converts:
 
 Values already provided in metric or scientific units, such as `degC`, `mg/L`, or `uS/cm`, are left unchanged.
 
+The conversions used by the script are:
+
+```text
+discharge in m^3/s = discharge in ft^3/s × 0.028316846592
+stage in m          = stage in ft × 0.3048
+depth in mm         = depth in in × 25.4
+temperature in degC = (temperature in degF - 32) × 5/9
+```
+
+Converted values are written with up to six decimal places. The `unit` column changes with the value, so a converted discharge row contains `m^3/s`, while an unconverted USGS row contains `ft^3/s`.
+
 To retain the value and unit exactly as supplied by USGS, use:
 
 ```bash
@@ -104,6 +115,22 @@ python download_usgs_data.py --site 02479500 --parameter discharge --units usgs
 ```
 
 The CSV `unit` column always identifies the unit used in the `value` column.
+
+## Example output
+
+The repository includes one test output: [mean daily discharge for USGS gauge 02479500 during 2023](examples/USGS_02479500_discharge_2023_metric.csv). It was produced with:
+
+```bash
+python download_usgs_data.py \
+  --site 02479500 \
+  --parameter discharge \
+  --statistic mean \
+  --units metric \
+  --start-date 2023-01-01 \
+  --end-date 2023-12-31
+```
+
+The file contains 365 observations from 1 January through 31 December 2023. Its `value` column is discharge in `m^3/s`; the original USGS unit for this series is `ft^3/s`. The file is included to show the output structure and confirm that the downloader works. It should not be treated as a separate copy of the official USGS archive.
 
 For another variable, use its five-digit parameter code. This example requests specific conductance (`00095`):
 
@@ -135,7 +162,7 @@ They can be edited for repeated use. To use coordinates as the default, set `LAT
 Each CSV contains:
 
 - observation date and value;
-- the unit reported by USGS;
+- the unit corresponding to the saved value, based on the selected `--units` option;
 - approval status and any qualifier;
 - station, parameter, statistic, and time-series identifiers.
 
