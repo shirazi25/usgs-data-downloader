@@ -33,7 +33,7 @@ Run the built-in example:
 python download_usgs_data.py
 ```
 
-It downloads mean daily discharge for station `02479500` during 2023. The CSV is written to the `data` directory.
+It downloads mean daily discharge for station `02479500` during 2023. The CSV is written to the `data` directory. Each run downloads one gauge only.
 
 ## Choose a station and variable
 
@@ -59,6 +59,23 @@ python download_usgs_data.py \
   --end-date 2023-12-31
 ```
 
+## Find the nearest gauge from coordinates
+
+If the gauge number is unknown, provide a WGS84 latitude and longitude instead:
+
+```bash
+python download_usgs_data.py \
+  --latitude 30.8624 \
+  --longitude -88.4178 \
+  --parameter discharge \
+  --start-date 2023-01-01 \
+  --end-date 2023-12-31
+```
+
+The script searches within 50 km, selects the nearest gauge that provides the requested parameter and statistic, prints its gauge number and distance, and downloads only that gauge. Change the maximum distance when necessary with `--search-radius-km`, for example `--search-radius-km 100`.
+
+Latitude and longitude must be supplied together. Use either a gauge number or coordinates in one command, not both.
+
 For another variable, use its five-digit parameter code. This example requests specific conductance (`00095`):
 
 ```bash
@@ -73,13 +90,15 @@ The same settings appear near the top of `download_usgs_data.py`:
 
 ```python
 SITE_ID = "02479500"
+LATITUDE = None
+LONGITUDE = None
 PARAMETER = "discharge"
 STATISTIC = "mean"
 START_DATE = "2023-01-01"
 END_DATE = "2023-12-31"
 ```
 
-They can be edited for repeated use. Command-line values take precedence, so the file does not need to be changed for an occasional download. Run `python download_usgs_data.py --help` to see all options.
+They can be edited for repeated use. To use coordinates as the default, set `LATITUDE` and `LONGITUDE` and leave them both as numbers; the coordinate settings then take precedence over `SITE_ID`. Command-line values take precedence over the stored settings, so the file does not need to be changed for an occasional download. Run `python download_usgs_data.py --help` to see all options.
 
 ## Output columns
 
