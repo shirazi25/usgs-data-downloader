@@ -90,7 +90,18 @@ Each CSV contains:
 - approval status and any qualifier;
 - station, parameter, statistic, and time-series identifiers.
 
-The approval status is kept in its original USGS form, such as `Approved` or `Provisional`, rather than being replaced with a project-specific flag.
+## Understanding the USGS flags
+
+USGS provides two fields that help interpret an observation: `approval_status` and `qualifier`. The downloader writes both fields exactly as they are returned by the modern USGS API. It does not replace them with a numeric flag.
+
+| Output field | Meaning |
+| --- | --- |
+| `approval_status = Approved` | USGS processing and review have been completed and the value is approved for publication. |
+| `approval_status = Provisional` | The value has not received final approval and remains subject to revision. |
+| `qualifier` | An additional USGS description attached to the observation, for example when a value is estimated, affected by ice, or associated with another special condition. |
+| blank `qualifier` | USGS returned no additional qualifier for that observation. |
+
+In the older USGS Water Services output, `A` meant approved and `P` meant provisional. The modern API separates those codes into the clearer `approval_status` field; the remaining observation flags are returned in `qualifier`. These fields describe publication status and special conditions, not a numerical accuracy score. Users should keep them with the measurements and consult the station record before deciding whether to exclude a flagged value.
 
 ## Larger numbers of requests
 
