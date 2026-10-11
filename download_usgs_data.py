@@ -12,6 +12,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 
@@ -21,6 +22,7 @@ LATITUDE = None
 LONGITUDE = None
 PARAMETER = "discharge"
 STATISTIC = "mean"
+UNITS = "metric"
 START_DATE = "2023-01-01"
 END_DATE = "2023-12-31"
 OUTPUT_DIR = Path(__file__).resolve().parent / "data"
@@ -224,6 +226,44 @@ def text_value(value) -> str:
     return str(value)
 
 
+def format_decimal(value: Decimal, decimal_places: int = 6) -> str:
+    quantizer = Decimal(1).scaleb(-decimal_places)
+    text = format(value.quantize(quantizer), "f")
+    return text.rstrip("0").rstrip(".")
+
+
+def metric_value(value: str, unit: str) -> tuple[str, str]:
+    """Convert common USGS customary units while leaving metric units unchanged."""
+    if not value or not unit:
+        return value, unit
+
+    normalized_unit = unit.strip().lower().replace("³", "^3")
+    try:
+        numeric_value = Decimal(value)
+    except InvalidOperation:
+        return value, unit
+
+    if normalized_unit in {"ft^3/s", "ft3/s", "cfs"}:
+        return format_decimal(numeric_value * Decimal("0.028316846592")), "m^3/s"
+    if normalized_unit in {"ft", "feet", "foot"}:
+        return format_decimal(numeric_value * Decimal("0.3048")), "m"
+    if normalized_unit in {"in", "inch", "inches"}:
+        return format_decimal(numeric_value * Decimal("25.4")), "mm"
+    if normalized_unit in {"degf", "°f"}:
+        converted = (numeric_value - Decimal("32")) * Decimal(5) / Decimal(9)
+        return format_decimal(converted), "degC"
+
+    # Parameters already reported in metric or scientific units are retained.
+    return value, unit
+
+
+def apply_unit_choice(rows: list[dict[str, str]], unit_system: str) -> None:
+    if unit_system == "usgs":
+        return
+    for row in rows:
+        row["value"], row["unit"] = metric_value(row["value"], row["unit"])
+
+
 def download_rows(first_url: str) -> list[dict[str, str]]:
     """Download all pages and convert GeoJSON features to CSV rows."""
     rows: list[dict[str, str]] = []
@@ -292,6 +332,12 @@ def parse_args() -> argparse.Namespace:
         default=STATISTIC,
         help="mean, minimum, maximum, or a five-digit USGS statistic code",
     )
+    parser.add_argument(
+        "--units",
+        choices=("metric", "usgs"),
+        default=UNITS,
+        help="Output unit system (default: metric)",
+    )
     parser.add_argument("--start-date", default=START_DATE, help="First date, YYYY-MM-DD")
     parser.add_argument("--end-date", default=END_DATE, help="Last date, YYYY-MM-DD")
     parser.add_argument(
@@ -347,7 +393,7 @@ def main() -> None:
     if output_path is None:
         filename = (
             f"USGS_{plain_site_id}_{parameter_code}_{statistic_code}_"
-            f"{start_date}_{end_date}.csv"
+            f"{start_date}_{end_date}_{args.units}.csv"
         )
         output_path = OUTPUT_DIR / filename
 
@@ -369,11 +415,12 @@ def main() -> None:
             "the selected parameter and statistic for the requested dates."
         )
 
+    apply_unit_choice(rows, args.units)
     save_csv(rows, output_path)
     units = ", ".join(sorted({row["unit"] for row in rows if row["unit"]}))
     print(f"Saved {len(rows):,} observations to {output_path.resolve()}")
     if units:
-        print(f"Units: {units}")
+        print(f"Units ({args.units} option): {units}")
 
 
 if __name__ == "__main__":

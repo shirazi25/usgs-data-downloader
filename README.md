@@ -44,6 +44,7 @@ python download_usgs_data.py \
   --site 02479500 \
   --parameter discharge \
   --statistic mean \
+  --units metric \
   --start-date 2023-01-01 \
   --end-date 2023-12-31
 ```
@@ -55,6 +56,7 @@ python download_usgs_data.py \
   --site 07141780 \
   --parameter stage \
   --statistic mean \
+  --units metric \
   --start-date 2023-01-01 \
   --end-date 2023-12-31
 ```
@@ -76,6 +78,33 @@ The script searches within 50 km, selects the nearest gauge that provides the re
 
 Latitude and longitude must be supplied together. Use either a gauge number or coordinates in one command, not both.
 
+## Choose the units
+
+Metric output is the default:
+
+```bash
+python download_usgs_data.py --site 02479500 --parameter discharge --units metric
+```
+
+For the common hydrological variables, the metric option converts:
+
+| Unit supplied by USGS | Metric output |
+| --- | --- |
+| cubic feet per second (`ft^3/s`) | cubic metres per second (`m^3/s`) |
+| feet (`ft`) | metres (`m`) |
+| inches (`in`) | millimetres (`mm`) |
+| degrees Fahrenheit (`degF`) | degrees Celsius (`degC`) |
+
+Values already provided in metric or scientific units, such as `degC`, `mg/L`, or `uS/cm`, are left unchanged.
+
+To retain the value and unit exactly as supplied by USGS, use:
+
+```bash
+python download_usgs_data.py --site 02479500 --parameter discharge --units usgs
+```
+
+The CSV `unit` column always identifies the unit used in the `value` column.
+
 For another variable, use its five-digit parameter code. This example requests specific conductance (`00095`):
 
 ```bash
@@ -94,6 +123,7 @@ LATITUDE = None
 LONGITUDE = None
 PARAMETER = "discharge"
 STATISTIC = "mean"
+UNITS = "metric"
 START_DATE = "2023-01-01"
 END_DATE = "2023-12-31"
 ```
